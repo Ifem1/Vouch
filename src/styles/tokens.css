@@ -1,0 +1,28 @@
+:root {
+  /* Vouch palette */
+  --vault-black: #090B10;
+  --fog-panel: #151A23;
+  --fog-panel-soft: #1C2333;
+  --paper-white: #F8FAFC;
+  --muted-steel: #94A3B8;
+  --bond-gold: #D8A739;
+  --signal-blue: #3B82F6;
+  --verdict-green: #22C55E;
+  --challenge-red: #EF4444;
+  --electric-violet: #8B5CF6;
+  --line: rgba(248, 250, 252, 0.1);
+  --glass: rgba(255, 255, 255, 0.04);
+
+  /* Semantic mappings */
+  --bg: var(--vault-black);
+  --surface: var(--fog-panel);
+  --surface-soft: var(--fog-panel-soft);
+  --text-primary: var(--paper-white);
+  --text-muted: var(--muted-steel);
+  --border: var(--line);
+  --accent: var(--bond-gold);
+  --accent-blue: var(--signal-blue);
+  --accent-green: var(--verdict-green);
+  --accent-red: var(--challenge-red);
+  --accent-violet: var(--electric-violet);
+}

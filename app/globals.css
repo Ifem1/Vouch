@@ -1,0 +1,137 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@import "../src/styles/tokens.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-ibm-plex-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+:root {
+  --background: #090B10;
+  --foreground: #F8FAFC;
+  --card: #151A23;
+  --card-foreground: #F8FAFC;
+  --popover: #151A23;
+  --popover-foreground: #F8FAFC;
+  --primary: #D8A739;
+  --primary-foreground: #090B10;
+  --secondary: #1C2333;
+  --secondary-foreground: #F8FAFC;
+  --muted: #1C2333;
+  --muted-foreground: #94A3B8;
+  --accent: #1C2333;
+  --accent-foreground: #F8FAFC;
+  --destructive: #EF4444;
+  --border: rgba(248, 250, 252, 0.1);
+  --input: rgba(248, 250, 252, 0.07);
+  --ring: #D8A739;
+  --radius: 0.5rem;
+  --chart-1: #D8A739;
+  --chart-2: #22C55E;
+  --chart-3: #8B5CF6;
+  --chart-4: #3B82F6;
+  --chart-5: #EF4444;
+  --sidebar: #151A23;
+  --sidebar-foreground: #F8FAFC;
+  --sidebar-primary: #D8A739;
+  --sidebar-primary-foreground: #090B10;
+  --sidebar-accent: #1C2333;
+  --sidebar-accent-foreground: #F8FAFC;
+  --sidebar-border: rgba(248, 250, 252, 0.1);
+  --sidebar-ring: #D8A739;
+}
+
+* { border-color: var(--border); }
+
+body {
+  background: var(--vault-black);
+  color: var(--paper-white);
+  font-family: var(--font-geist-sans), sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-display { font-family: var(--font-space-grotesk), var(--font-geist-sans), sans-serif; }
+.font-mono    { font-family: var(--font-ibm-plex-mono), 'Courier New', monospace; }
+
+.glass-panel {
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(8px);
+}
+
+/* Verdict colours */
+.verdict-trustworthy        { color: var(--verdict-green); }
+.verdict-weakly_supported   { color: var(--bond-gold); }
+.verdict-overstated         { color: var(--bond-gold); }
+.verdict-contradicted       { color: var(--challenge-red); }
+.verdict-unverifiable       { color: var(--muted-steel); }
+.verdict-impersonation_risk { color: var(--challenge-red); }
+.verdict-material_breach    { color: var(--challenge-red); }
+.verdict-invalid_challenge  { color: var(--verdict-green); }
+.verdict-insufficient_evidence { color: var(--muted-steel); }
+
+/* Status colours */
+.status-active      { color: var(--verdict-green); }
+.status-challenged  { color: var(--challenge-red); }
+.status-under_review{ color: var(--bond-gold); }
+.status-upheld      { color: var(--verdict-green); }
+.status-downgraded  { color: var(--bond-gold); }
+.status-suspended   { color: var(--challenge-red); }
+.status-slashed     { color: var(--challenge-red); }
+.status-expired     { color: var(--muted-steel); }
+.status-retired     { color: var(--muted-steel); }
+
+/* Bond tier colours */
+.tier-micro        { color: var(--muted-steel); }
+.tier-standard     { color: var(--signal-blue); }
+.tier-high_trust   { color: var(--bond-gold); }
+.tier-institutional{ color: var(--electric-violet); }
+
+/* Glow utilities */
+.glow-gold  { box-shadow: 0 0 24px rgba(216,167,57,0.18); }
+.glow-red   { box-shadow: 0 0 24px rgba(239,68,68,0.18); }
+.glow-green { box-shadow: 0 0 24px rgba(34,197,94,0.18); }
+
+/* Scrollbar */
+::-webkit-scrollbar       { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line); border-radius: 2px; }

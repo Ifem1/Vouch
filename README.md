@@ -1,58 +1,64 @@
-# Cite — Evidence Court
+# Vouch — Reputation Bond Protocol
 
-> A link is not proof until the claim and the source have been judged together.
+> Put your GEN where your reputation is.
 
-Cite is a GenLayer-powered decentralized evidence court. Users create public claims, submit public sources, and GenLayer validators reach consensus on whether those sources actually prove the claim — on-chain.
+Vouch is a GenLayer-powered reputation bond protocol. Users create capability capsules backed by a GEN bond, others endorse or challenge them, and GenLayer's AI validators reach on-chain consensus on whether a challenge is valid.
 
 ## Why GenLayer
 
-A normal smart contract can verify that someone uploaded a URL. It cannot judge whether that URL proves a natural-language claim. GenLayer's Intelligent Contracts run nondeterministic consensus: multiple independent validators inspect each source and agree on a verdict before it is stored on-chain.
+Traditional reputation systems are off-chain and unverifiable. Vouch uses GenLayer Intelligent Contracts to run nondeterministic AI consensus: multiple independent validators evaluate challenge evidence and agree on a verdict before it is stored on-chain — making reputation economically accountable.
 
-Cite uses this to answer: **Did the evidence actually prove the claim?**
+## How It Works
+
+1. **Creator** stakes a GEN bond on a capability claim (capsule)
+2. **Endorsers** add their own GEN bonds to signal trust
+3. **Challengers** open a challenge with evidence and a bond
+4. **GenLayer validators** reach AI consensus on the verdict
+5. Winners keep their bond + a share of the loser's bond
 
 ## Architecture
 
 ```
-/contracts/CiteEvidenceCourt.py   GenLayer Intelligent Contract
-/app/                             Next.js 15 App Router pages
-/src/components/cite/             Claim Lens, Evidence Stack, Consensus Panel
+/contracts/VouchReputation.py     GenLayer Intelligent Contract
+/app/                             Next.js App Router pages
+/src/components/vouch/            CapsuleCard, ChallengeScar, VerdictSeal, etc.
 /src/lib/genlayer/                SDK client, chain config, contract interaction
 /src/lib/types/                   TypeScript types
-/src/lib/validation/              Zod schemas + claim sharpness meter
 ```
-
-**Data flow:**
-1. User fills form → Zod validates → `genlayer-js` writes to StudioNet
-2. Contract stores Claim / Evidence / Review in `TreeMap` / `DynArray`
-3. `request_review` calls GenLayer's nondeterministic consensus
-4. Validators independently fetch sources and return canonical JSON verdict
-5. Consensus result stored on-chain — frontend reads and displays it
 
 ## Contract Methods
 
 | Method | Type | Description |
 |--------|------|-------------|
-| `create_claim(title, statement, claim_type, evidence_standard, context, excluded_sources, preferred_sources, deadline)` | write | Create a new claim, returns `claim_id` |
-| `submit_evidence(claim_id, source_url, source_title, source_type, support_direction, explanation, excerpt, archived_url)` | write | Submit evidence for a claim, returns `evidence_id` |
-| `request_review(claim_id)` | write | Trigger GenLayer consensus on submitted evidence, returns `review_id` |
-| `challenge_evidence(claim_id, evidence_id, challenge_reason, counter_source_url)` | write | Mark evidence as challenged |
-| `get_claim(claim_id)` | view | Read a Claim struct |
-| `get_evidence(evidence_id)` | view | Read an Evidence struct |
-| `get_claim_evidence_ids(claim_id)` | view | Get all evidence IDs for a claim |
-| `get_review(review_id)` | view | Read a Review struct |
-| `get_claim_latest_review(claim_id)` | view | Get the most recent review for a claim |
+| `create_capsule(...)` | write | Create a reputation capsule with a GEN bond |
+| `endorse_capsule(capsule_id, bond_wei, note)` | write | Endorse a capsule with a GEN bond |
+| `open_challenge(capsule_id, type, summary, evidence_urls, bond_wei)` | write | Challenge a capsule |
+| `request_challenge_verdict(challenge_id)` | write | Trigger AI validator consensus |
+| `resolve_challenge(challenge_id)` | write | Finalise the verdict on-chain |
+| `claim_challenge_reward(challenge_id)` | write | Claim reward if challenge was upheld |
+| `withdraw_endorsement(endorsement_id)` | write | Withdraw an active endorsement |
+| `get_capsule(capsule_id)` | view | Read a capsule |
+| `get_public_capsules(offset, limit)` | view | Browse public capsules |
+| `get_capsules_by_owner(address)` | view | Get capsules by owner |
+| `get_capsule_challenges(capsule_id)` | view | Get challenges for a capsule |
+| `get_capsule_endorsements(capsule_id)` | view | Get endorsements for a capsule |
+| `get_challenger_dashboard(address)` | view | Challenger's open/resolved challenges |
+| `get_endorser_dashboard(address)` | view | Endorser's active positions |
+| `get_wallet_activity(address, limit)` | view | Full activity log for a wallet |
 
 ## Frontend Routes
 
 | Route | Description |
 |-------|-------------|
-| `/` | Landing — hero, how-it-works, example claim rooms |
-| `/claims` | Claim index with filters and verdict heat |
-| `/claims/new` | Multi-step claim creation form with sharpness meter |
-| `/claims/[id]` | Claim room — Claim Lens + Evidence Stack + Consensus Panel |
-| `/claims/[id]/evidence/new` | Evidence submission form with source self-check |
-| `/claims/[id]/review/[reviewId]` | Verdict detail — canonical JSON, ring, strongest/weakest source |
-| `/sources` | Source library (demo fixture in MVP) |
+| `/` | Landing — hero, how it works |
+| `/explore` | Browse public capsules |
+| `/create` | Create a new reputation capsule |
+| `/capsule/[id]` | Capsule detail — endorse or challenge |
+| `/dashboard/owner` | Your capsules and bond positions |
+| `/dashboard/endorser` | Your active endorsements |
+| `/dashboard/challenger` | Your challenges and verdicts |
+| `/wallet` | Full wallet activity log |
+| `/admin` | Observatory — protocol health stats |
 
 ## Environment Variables
 
@@ -60,18 +66,19 @@ Cite uses this to answer: **Did the evidence actually prove the claim?**
 NEXT_PUBLIC_GENLAYER_CHAIN_ID=61999
 NEXT_PUBLIC_GENLAYER_RPC_URL=https://studio.genlayer.com/api
 NEXT_PUBLIC_GENLAYER_EXPLORER_URL=https://explorer-studio.genlayer.com
-NEXT_PUBLIC_CITE_CONTRACT_ADDRESS=0x...  # Set after deploying the contract
+NEXT_PUBLIC_VOUCH_CONTRACT_ADDRESS=0x...  # Set after deploying the contract
 ```
 
-Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_CITE_CONTRACT_ADDRESS` after deploying.
+Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_VOUCH_CONTRACT_ADDRESS` after deploying.
 
 ## Local Setup
 
 ```bash
-git clone <repo>
-cd CITE
+git clone https://github.com/Ifem1/Vouch.git
+cd Vouch
 npm install
 cp .env.example .env.local
+# Add your contract address to .env.local
 npm run dev
 ```
 
@@ -80,62 +87,16 @@ Open [http://localhost:3000](http://localhost:3000).
 ## StudioNet Deployment
 
 1. Open [GenLayer Studio](https://studio.genlayer.com)
-2. Create a new project and paste the contents of `contracts/CiteEvidenceCourt.py`
+2. Paste the contents of `contracts/VouchReputation.py`
 3. Deploy to StudioNet (chain ID 61999)
 4. Copy the deployed contract address
-5. Set `NEXT_PUBLIC_CITE_CONTRACT_ADDRESS=<address>` in `.env.local`
+5. Set `NEXT_PUBLIC_VOUCH_CONTRACT_ADDRESS=<address>` in `.env.local`
 6. Restart the dev server
-
-## Testing Steps
-
-### Manual E2E
-
-1. Install MetaMask and add StudioNet:
-   - RPC: `https://studio.genlayer.com/api`
-   - Chain ID: `61999`
-   - Explorer: `https://explorer-studio.genlayer.com`
-
-2. Get test GEN from the StudioNet faucet in GenLayer Studio
-
-3. Connect wallet at `/` or `/claims/new`
-
-4. Create a claim:
-   - Title: "The GenLayer Studio documentation describes Studio as a sandbox for testing Intelligent Contracts"
-   - Statement: "The official GenLayer Studio documentation explicitly describes Studio as a local sandbox environment for testing Intelligent Contracts, not a production deployment environment."
-   - Type: Technical Capability
-   - Standard: Official Source or Repository
-
-5. Submit strong evidence:
-   - URL: `https://docs.genlayer.com/developers/intelligent-contracts/tools/genlayer-studio`
-   - Type: Documentation Page
-   - Direction: Supports
-
-6. Submit weak evidence:
-   - URL: `https://example.com/some-blog-post`
-   - Type: Blog Post
-   - Direction: Supports
-
-7. Click "Request Review" from the Claim Room
-
-8. Wait for GenLayer consensus (can take 30–90 seconds on StudioNet)
-
-9. Refresh the Claim Room — the Consensus Panel will show the verdict
-
-10. Open the explorer link to see the on-chain transaction
-
-## Known Limitations
-
-- `request_review` uses `gl.get_webpage` as the nondeterministic consensus call. On StudioNet, response times vary.
-- The Sources page (`/sources`) uses demo fixtures in MVP. Full on-chain aggregation requires indexing all evidence across claims.
-- GenLayer JS SDK wallet integration uses `window.ethereum` directly — MetaMask or a compatible injected wallet is required.
-- The Claim Sharpness Meter is frontend-only heuristics, not GenLayer consensus.
-- No pagination on `/claims` — loads up to 10 on-chain claims by sequential ID scan.
 
 ## Stack
 
-- **Next.js 15** (App Router, TypeScript)
-- **Tailwind CSS** + **shadcn/ui** (Inkglass Evidence Lab theme)
-- **Framer Motion** (verdict ring, evidence card animations)
+- **Next.js 16** (App Router, TypeScript)
+- **Tailwind CSS** + **shadcn/ui**
 - **genlayer-js** (SDK for StudioNet interaction)
-- **Zod** + **react-hook-form** (form validation)
-- **GenLayer Intelligent Contract** (Python, TreeMap/DynArray storage, nondeterministic review)
+- **GenLayer Intelligent Contract** (Python, TreeMap storage, AI consensus)
+- **StudioNet** — Chain ID 61999

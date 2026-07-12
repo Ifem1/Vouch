@@ -7,11 +7,12 @@ interface Props {
   activeBond?: number
   tier:       BondTier
   label?:     string
+  inactiveLabel?: string
 }
 
 const TIER_ORDER: BondTier[] = ['micro', 'standard', 'high_trust', 'institutional']
 
-export function GENBondRail({ bondWei, activeBond, tier, label = 'GEN Bond' }: Props) {
+export function GENBondRail({ bondWei, activeBond, tier, label = 'GEN Bond', inactiveLabel = 'inactive' }: Props) {
   const tierIndex  = TIER_ORDER.indexOf(tier)
   const nextTier   = TIER_ORDER[tierIndex + 1] as BondTier | undefined
   const nextGenMin = nextTier ? BOND_TIER_GEN[nextTier] : null
@@ -47,7 +48,7 @@ export function GENBondRail({ bondWei, activeBond, tier, label = 'GEN Bond' }: P
         <span className="text-sm text-[var(--muted-steel)] ml-1">GEN bonded</span>
         {activeBond !== undefined && activeBond !== bondWei && (
           <div className="text-xs text-[var(--muted-steel)] mt-0.5">
-            {weiToGEN(activeBond)} GEN active · {weiToGEN(bondWei - activeBond)} GEN slashed
+            {weiToGEN(activeBond)} GEN active · {weiToGEN(bondWei - activeBond)} GEN {inactiveLabel}
           </div>
         )}
       </div>

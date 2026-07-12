@@ -226,7 +226,12 @@ export default function CapsuleDetailPage({ params }: { params: Promise<{ id: st
         {/* Right column */}
         <div className="space-y-4">
           <ReputationHeatRing capsule={capsule} />
-          <GENBondRail bondWei={capsule.bond_amount} activeBond={capsule.active_bond} tier={capsule.bond_tier} />
+          <GENBondRail
+            bondWei={capsule.bond_amount}
+            activeBond={capsule.active_bond}
+            tier={capsule.bond_tier}
+            inactiveLabel={capsule.status === 'retired' ? 'withdrawn' : 'unavailable'}
+          />
 
           {/* Actions */}
           <div className="space-y-2">

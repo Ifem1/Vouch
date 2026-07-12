@@ -72,7 +72,7 @@ export interface Challenge {
   status:            ChallengeStatus
   verdict_id:        string | null
   created_at:        number
-  resolved_at:       number | null
+  resolved_at:       number | string | null
   reward_claimed?:   boolean
   reward_status?:    'won' | 'forfeited' | 'returned'
 }
@@ -88,7 +88,7 @@ export interface Verdict {
   materiality:         Materiality
   action:              VerdictAction
   slash_bps:           number
-  public_reason_short: string
+  short_reason:        string
   created_at:          number
 }
 
@@ -182,8 +182,10 @@ export function bondTierFromAmount(wei: number): BondTier {
   return 'micro'
 }
 
-export function formatDate(ms: number): string {
-  return new Date(ms).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+export function formatDate(ms: number | string | null): string {
+  if (ms === null || ms === '') return '—'
+  const value = typeof ms === 'string' ? Number(ms) : ms
+  return new Date(value).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
 }
 
 export function isExpired(capsule: Capsule): boolean {

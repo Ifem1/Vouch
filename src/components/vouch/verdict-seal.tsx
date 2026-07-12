@@ -49,7 +49,7 @@ export function VerdictSeal({ verdict }: Props) {
         <div className={`text-xl font-display font-bold mb-1 verdict-${verdict.verdict_status}`}>
           {VERDICT_LABELS[verdict.verdict_status]}
         </div>
-        <p className="text-sm text-[var(--paper-white)]">{verdict.public_reason_short}</p>
+        <p className="text-sm text-[var(--paper-white)]">{verdict.short_reason}</p>
       </div>
 
       {/* Confidence bar */}

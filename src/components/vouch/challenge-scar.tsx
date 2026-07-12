@@ -80,7 +80,7 @@ export function ChallengeScar({ challenge, verdict }: Props) {
             {VERDICT_LABELS[verdict.verdict_status]}
           </span>
           <span className="text-xs text-[var(--muted-steel)]">·</span>
-          <span className="text-xs text-[var(--muted-steel)]">{verdict.public_reason_short}</span>
+          <span className="text-xs text-[var(--muted-steel)]">{verdict.short_reason}</span>
         </div>
       )}
 

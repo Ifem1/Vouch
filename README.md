@@ -66,7 +66,7 @@ Traditional reputation systems are off-chain and unverifiable. Vouch uses GenLay
 NEXT_PUBLIC_GENLAYER_CHAIN_ID=61999
 NEXT_PUBLIC_GENLAYER_RPC_URL=https://studio.genlayer.com/api
 NEXT_PUBLIC_GENLAYER_EXPLORER_URL=https://explorer-studio.genlayer.com
-NEXT_PUBLIC_VOUCH_CONTRACT_ADDRESS=0x...  # Set after deploying the contract
+NEXT_PUBLIC_VOUCH_CONTRACT_ADDRESS=0xd3FDb88478331a3B003A19C0819634B5100c110d
 ```
 
 Copy `.env.example` to `.env.local` and fill in `NEXT_PUBLIC_VOUCH_CONTRACT_ADDRESS` after deploying.

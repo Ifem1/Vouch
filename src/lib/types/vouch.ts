@@ -168,8 +168,11 @@ export function weiToGEN(wei: number): string {
   return (wei / 1e18).toFixed(2)
 }
 
-export function genToWei(gen: number): number {
-  return Math.floor(gen * 1e18)
+export function genToWei(gen: number | string): bigint {
+  const value = String(gen).trim()
+  if (!/^\d+(\.\d{0,18})?$/.test(value)) throw new Error('GEN amount must have at most 18 decimal places')
+  const [whole, fraction = ''] = value.split('.')
+  return BigInt(whole) * BigInt(10) ** BigInt(18) + BigInt(fraction.padEnd(18, '0'))
 }
 
 export function bondTierFromAmount(wei: number): BondTier {

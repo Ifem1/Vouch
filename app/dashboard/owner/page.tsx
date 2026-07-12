@@ -44,7 +44,7 @@ export default function OwnerDashboardPage() {
 
   async function handleWithdraw(capsuleId: string, activeBond: number) {
     try {
-      const result = await withdrawUnlockedBond(capsuleId, activeBond)
+      const result = await withdrawUnlockedBond(capsuleId, BigInt(activeBond))
       setTxResult(result)
       toast.success('Bond withdrawn')
     } catch (e: unknown) { toast.error((e as Error).message) }

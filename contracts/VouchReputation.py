@@ -1,10 +1,17 @@
-# # v0.2.18
+# v0.2.18
 # { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
 
 from genlayer import *
 
 import json
 import typing
+
+@gl.evm.contract_interface
+class _NativeRecipient:
+    class View:
+        pass
+    class Write:
+        pass
 
 
 # ------------------------------------------------------------------
@@ -189,6 +196,17 @@ class VouchReputation(gl.Contract):
         import time
         return int(time.time() * 1000)
 
+    def _received_exactly(self, declared_wei: int) -> int:
+        received = int(gl.message.value)
+        if received != declared_wei:
+            raise gl.vm.UserError("Transaction value must exactly equal declared wei amount")
+        return received
+
+    def _pay(self, recipient: str, amount_wei: int) -> None:
+        if amount_wei <= 0:
+            raise gl.vm.UserError("Payout must be positive")
+        _NativeRecipient(Address(recipient)).emit_transfer(value=u256(amount_wei))
+
     def _validate_verdict(self, r: typing.Any) -> None:
         required = {"verdict_status", "action", "claim_alignment", "evidence_strength",
                     "materiality", "slash_bps", "confidence", "short_reason"}
@@ -241,7 +259,7 @@ class VouchReputation(gl.Contract):
     # Capsule lifecycle
     # ------------------------------------------------------------------
 
-    @gl.public.write
+    @gl.public.write.payable
     def create_capsule(
         self,
         claim_title: str,
@@ -250,9 +268,9 @@ class VouchReputation(gl.Contract):
         scope_boundaries: str,
         public_evidence_urls: str,
         private_evidence_commitment_hash: str,
-        expires_at_ms: int,
+        expires_at_ms: u64,
         visibility_mode: str,
-        bond_amount_wei: int,
+        bond_amount_wei: u256,
     ) -> str:
         self._require_not_paused()
         self._require_non_empty(claim_title, "claim_title")
@@ -262,6 +280,7 @@ class VouchReputation(gl.Contract):
             raise gl.vm.UserError("Invalid category: " + category)
         if bond_amount_wei < MICRO_BOND_MIN:
             raise gl.vm.UserError("Bond must be at least " + str(MICRO_BOND_MIN) + " wei (1 GEN)")
+        self._received_exactly(bond_amount_wei)
 
         sender = self._sender()
         now    = self._now()
@@ -307,8 +326,8 @@ class VouchReputation(gl.Contract):
         self._log(sender, {"type": "create_capsule", "capsule_id": cid, "bond_wei": bond_amount_wei, "ts": now})
         return cid
 
-    @gl.public.write
-    def increase_capsule_bond(self, capsule_id: str, additional_wei: int) -> None:
+    @gl.public.write.payable
+    def increase_capsule_bond(self, capsule_id: str, additional_wei: u256) -> None:
         self._require_not_paused()
         sender  = self._sender()
         capsule = self._require_capsule(capsule_id)
@@ -319,6 +338,7 @@ class VouchReputation(gl.Contract):
             raise gl.vm.UserError("Cannot increase bond on " + capsule["status"] + " capsule")
         if additional_wei <= 0:
             raise gl.vm.UserError("additional_wei must be positive")
+        self._received_exactly(additional_wei)
 
         capsule["bond_amount"] = capsule["bond_amount"] + additional_wei
         capsule["active_bond"] = capsule["active_bond"] + additional_wei
@@ -343,13 +363,13 @@ class VouchReputation(gl.Contract):
         self.capsules[capsule_id] = self._json(capsule)
         self._log(sender, {"type": "retire_capsule", "capsule_id": capsule_id, "ts": self._now()})
 
-    @gl.public.write
+    @gl.public.write.payable
     def renew_capsule(
         self,
         capsule_id: str,
-        new_expires_at_ms: int,
+        new_expires_at_ms: u64,
         updated_evidence_urls: str,
-        additional_bond_wei: int,
+        additional_bond_wei: u256,
     ) -> None:
         self._require_not_paused()
         sender  = self._sender()
@@ -364,6 +384,7 @@ class VouchReputation(gl.Contract):
             raise gl.vm.UserError("Cannot renew capsule under active challenge")
         if new_expires_at_ms <= now:
             raise gl.vm.UserError("new_expires_at_ms must be in the future")
+        self._received_exactly(additional_bond_wei)
 
         if additional_bond_wei > 0:
             capsule["bond_amount"] = capsule["bond_amount"] + additional_bond_wei
@@ -382,8 +403,8 @@ class VouchReputation(gl.Contract):
     # Endorsement
     # ------------------------------------------------------------------
 
-    @gl.public.write
-    def endorse_capsule(self, capsule_id: str, endorsement_bond_wei: int, note: str) -> str:
+    @gl.public.write.payable
+    def endorse_capsule(self, capsule_id: str, endorsement_bond_wei: u256, note: str) -> str:
         self._require_not_paused()
         sender  = self._sender()
         now     = self._now()
@@ -397,6 +418,7 @@ class VouchReputation(gl.Contract):
             raise gl.vm.UserError("Cannot endorse expired capsule")
         if endorsement_bond_wei < MIN_ENDORSEMENT:
             raise gl.vm.UserError("Endorsement bond must be at least " + str(MIN_ENDORSEMENT) + " wei")
+        self._received_exactly(endorsement_bond_wei)
 
         eid = self._next_id("END", "endorsement")
         endorsement = {
@@ -452,6 +474,8 @@ class VouchReputation(gl.Contract):
             raise gl.vm.UserError("Only endorser can claim refund")
         if endorsement.get("refund_claimed") == True:
             raise gl.vm.UserError("Refund already claimed")
+        if endorsement["status"] != "withdrawn":
+            raise gl.vm.UserError("Withdraw endorsement before claiming its refund")
 
         capsule = self._require_capsule(endorsement["capsule_id"])
         if capsule["status"] == "challenged":
@@ -459,20 +483,21 @@ class VouchReputation(gl.Contract):
 
         endorsement["refund_claimed"] = True
         self.endorsements[endorsement_id] = self._json(endorsement)
+        self._pay(sender, int(endorsement["bond_wei"]))
         self._log(sender, {"type": "claim_refund", "endorsement_id": endorsement_id, "ts": self._now()})
 
     # ------------------------------------------------------------------
     # Challenge
     # ------------------------------------------------------------------
 
-    @gl.public.write
+    @gl.public.write.payable
     def open_challenge(
         self,
         capsule_id: str,
         challenge_type: str,
         challenge_summary: str,
         evidence_urls: str,
-        challenge_bond_wei: int,
+        challenge_bond_wei: u256,
     ) -> str:
         self._require_not_paused()
         sender  = self._sender()
@@ -491,6 +516,7 @@ class VouchReputation(gl.Contract):
 
         if challenge_bond_wei < MIN_CHALLENGE:
             raise gl.vm.UserError("Challenge bond must be at least " + str(MIN_CHALLENGE) + " wei")
+        self._received_exactly(challenge_bond_wei)
 
         if capsule["status"] in ("retired", "slashed", "expired"):
             raise gl.vm.UserError("Cannot challenge a " + capsule["status"] + " capsule")
@@ -510,6 +536,7 @@ class VouchReputation(gl.Contract):
             "resolved_at": "",
             "reward_claimed": False,
             "reward_status": "",
+            "claimable_reward_wei": 0,
         }
         self.challenges[chid] = self._json(challenge)
         capsule["challenge_count"] = capsule["challenge_count"] + 1
@@ -553,6 +580,25 @@ class VouchReputation(gl.Contract):
         })
 
         def evaluate_once() -> str:
+            def fetch_evidence(urls: typing.List[str]) -> str:
+                pages: typing.List[str] = []
+                for url in urls[:10]:
+                    if not (url.startswith("https://") or url.startswith("http://")):
+                        pages.append("URL rejected (HTTP(S) required): " + url)
+                        continue
+                    try:
+                        response = gl.nondet.web.get(url)
+                        if response.status_code >= 400:
+                            pages.append("URL unavailable (HTTP " + str(response.status_code) + "): " + url)
+                        else:
+                            text = response.body.decode("utf-8", errors="replace")[:12000]
+                            pages.append("SOURCE " + url + "\n" + text)
+                    except Exception:
+                        pages.append("URL could not be fetched: " + url)
+                return "\n\n".join(pages)
+
+            supporting_pages = fetch_evidence(capsule.get("public_evidence_urls", []))
+            challenge_pages = fetch_evidence(challenge.get("evidence_urls", []))
             prompt = (
                 "You are a GenLayer reputation validator evaluating a challenge to a reputation capsule.\n\n"
                 "Judge ONLY whether the specific capability claim is still trustworthy.\n"
@@ -564,12 +610,16 @@ class VouchReputation(gl.Contract):
                 + capsule_json + "\n\n"
                 "=== PUBLIC EVIDENCE (supporting the claim) ===\n"
                 + (evidence_list if evidence_list else "(none submitted)") + "\n\n"
+                "=== FETCHED SUPPORTING EVIDENCE ===\n"
+                + (supporting_pages if supporting_pages else "(none fetched)") + "\n\n"
                 "=== ENDORSEMENTS ===\n"
                 + endorsement_summary + "\n\n"
                 "=== CHALLENGE ===\n"
                 + challenge_json + "\n\n"
                 "=== CHALLENGE EVIDENCE (against the claim) ===\n"
                 + (challenge_evidence_list if challenge_evidence_list else "(none submitted)") + "\n\n"
+                "=== FETCHED CHALLENGE EVIDENCE ===\n"
+                + (challenge_pages if challenge_pages else "(none fetched)") + "\n\n"
                 "=== PREVIOUS VERDICT ===\n"
                 + (prev_verdict_text if prev_verdict_text else "(none)") + "\n\n"
                 'Return ONLY valid JSON matching this schema exactly:\n'
@@ -658,7 +708,14 @@ class VouchReputation(gl.Contract):
             slashed          = (active * slash_bps_capped) // 10000
             slashed          = min(slashed, active)
             capsule["active_bond"]  = active - slashed
-            self.protocol_reserve   = u256(int(self.protocol_reserve) + slashed)
+            challenge["claimable_reward_wei"] = int(challenge["challenge_bond"]) + slashed
+
+        if action in ("suspend", "downgrade"):
+            challenge["claimable_reward_wei"] = int(challenge["challenge_bond"])
+        elif action in ("dismiss_challenge", "keep_active", "expire_without_slash"):
+            self.protocol_reserve = u256(int(self.protocol_reserve) + int(challenge["challenge_bond"]))
+        elif int(challenge.get("claimable_reward_wei", 0)) == 0:
+            challenge["claimable_reward_wei"] = int(challenge["challenge_bond"])
 
         challenge["status"]      = "resolved"
         challenge["resolved_at"] = str(now)
@@ -684,16 +741,19 @@ class VouchReputation(gl.Contract):
         verdict = self._require_verdict(challenge["verdict_id"])
         action  = verdict["action"]
 
+        payout = int(challenge.get("claimable_reward_wei", 0))
         if action in ("slash_partial", "slash_full", "suspend", "downgrade"):
             challenge["reward_status"] = "won"
         elif action in ("dismiss_challenge", "keep_active", "expire_without_slash"):
-            self.protocol_reserve = u256(int(self.protocol_reserve) + int(challenge["challenge_bond"]))
             challenge["reward_status"] = "forfeited"
         else:
             challenge["reward_status"] = "returned"
 
         challenge["reward_claimed"] = True
+        challenge["claimable_reward_wei"] = 0
         self.challenges[challenge_id] = self._json(challenge)
+        if payout > 0:
+            self._pay(sender, payout)
         self._log(sender, {"type": "claim_reward", "challenge_id": challenge_id, "status": challenge["reward_status"], "ts": self._now()})
 
     # ------------------------------------------------------------------
@@ -701,7 +761,7 @@ class VouchReputation(gl.Contract):
     # ------------------------------------------------------------------
 
     @gl.public.write
-    def withdraw_unlocked_bond(self, capsule_id: str, amount_wei: int) -> None:
+    def withdraw_unlocked_bond(self, capsule_id: str, amount_wei: u256) -> None:
         self._require_not_paused()
         sender  = self._sender()
         capsule = self._require_capsule(capsule_id)
@@ -719,6 +779,7 @@ class VouchReputation(gl.Contract):
 
         capsule["active_bond"] = int(capsule["active_bond"]) - amount_wei
         self.capsules[capsule_id] = self._json(capsule)
+        self._pay(sender, amount_wei)
         self._log(sender, {"type": "withdraw_bond", "capsule_id": capsule_id, "amount_wei": amount_wei, "ts": self._now()})
 
     # ------------------------------------------------------------------

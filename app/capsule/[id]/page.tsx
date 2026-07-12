@@ -109,7 +109,7 @@ export default function CapsuleDetailPage({ params }: { params: Promise<{ id: st
     if (!capsule) return
     setSubmitting(true)
     try {
-      const result = await endorseCapsule(capsule.capsule_id, genToWei(parseFloat(endorseGEN)), endorseNote)
+      const result = await endorseCapsule(capsule.capsule_id, genToWei(endorseGEN), endorseNote)
       setTxResult(result)
       setEndorseOpen(false)
       toast.success('Endorsement submitted!')
@@ -127,7 +127,7 @@ export default function CapsuleDetailPage({ params }: { params: Promise<{ id: st
     if (!urls.length) { toast.error('Add at least one evidence URL'); return }
     setSubmitting(true)
     try {
-      const result = await openChallenge(capsule.capsule_id, chalType, chalSummary, urls, genToWei(parseFloat(chalGEN)))
+      const result = await openChallenge(capsule.capsule_id, chalType, chalSummary, urls, genToWei(chalGEN))
       setTxResult(result)
       setChallengeOpen(false)
       toast.success('Challenge opened! Redirecting to your dashboard…')

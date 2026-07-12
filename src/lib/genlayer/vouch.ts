@@ -44,7 +44,7 @@ async function getGenLayerClient(withProvider = false) {
   })
 }
 
-async function sendWrite(method: string, args: unknown[], valueWei = 0): Promise<TransactionResult> {
+async function sendWrite(method: string, args: unknown[], valueWei: bigint = BigInt(0)): Promise<TransactionResult> {
   if (typeof window === 'undefined' || !window.ethereum)
     throw new WalletError('No wallet detected. Install MetaMask or a compatible wallet.', 'NO_WALLET')
 
@@ -61,7 +61,7 @@ async function sendWrite(method: string, args: unknown[], valueWei = 0): Promise
     address:      contractAddress as `0x${string}`,
     functionName: method,
     args:         args as Parameters<typeof client.writeContract>[0]['args'],
-    value:        BigInt(valueWei),
+    value:        valueWei,
   })
 
   const receipt = await client.waitForTransactionReceipt({ hash: hash as `0x${string}` & { length: 66 } })
@@ -96,7 +96,7 @@ export interface CreateCapsuleInput {
   privateEvidenceCommitmentHash: string
   expiresAtMs:  number
   visibilityMode: string
-  bondAmountWei: number
+  bondAmountWei: bigint
 }
 
 export async function createCapsule(input: CreateCapsuleInput): Promise<TransactionResult> {
@@ -104,11 +104,11 @@ export async function createCapsule(input: CreateCapsuleInput): Promise<Transact
     input.claimTitle, input.claimBody, input.category, input.scopeBoundaries,
     JSON.stringify(input.publicEvidenceUrls), input.privateEvidenceCommitmentHash,
     input.expiresAtMs, input.visibilityMode, input.bondAmountWei,
-  ])
+  ], input.bondAmountWei)
 }
 
-export async function increaseCapsuleBond(capsuleId: string, additionalWei: number): Promise<TransactionResult> {
-  return sendWrite('increase_capsule_bond', [capsuleId, additionalWei])
+export async function increaseCapsuleBond(capsuleId: string, additionalWei: bigint): Promise<TransactionResult> {
+  return sendWrite('increase_capsule_bond', [capsuleId, additionalWei], additionalWei)
 }
 
 export async function retireCapsule(capsuleId: string): Promise<TransactionResult> {
@@ -117,15 +117,15 @@ export async function retireCapsule(capsuleId: string): Promise<TransactionResul
 
 export async function renewCapsule(
   capsuleId: string, newExpiresAtMs: number,
-  updatedEvidenceUrls: string[], additionalBondWei: number,
+  updatedEvidenceUrls: string[], additionalBondWei: bigint,
 ): Promise<TransactionResult> {
-  return sendWrite('renew_capsule', [capsuleId, newExpiresAtMs, JSON.stringify(updatedEvidenceUrls), additionalBondWei])
+  return sendWrite('renew_capsule', [capsuleId, newExpiresAtMs, JSON.stringify(updatedEvidenceUrls), additionalBondWei], additionalBondWei)
 }
 
 // ── endorsement writes ────────────────────────────────────────────
 
-export async function endorseCapsule(capsuleId: string, bondWei: number, note: string): Promise<TransactionResult> {
-  return sendWrite('endorse_capsule', [capsuleId, bondWei, note])
+export async function endorseCapsule(capsuleId: string, bondWei: bigint, note: string): Promise<TransactionResult> {
+  return sendWrite('endorse_capsule', [capsuleId, bondWei, note], bondWei)
 }
 
 export async function withdrawEndorsement(endorsementId: string): Promise<TransactionResult> {
@@ -140,9 +140,9 @@ export async function claimEndorsementRefund(endorsementId: string): Promise<Tra
 
 export async function openChallenge(
   capsuleId: string, challengeType: string, challengeSummary: string,
-  evidenceUrls: string[], challengeBondWei: number,
+  evidenceUrls: string[], challengeBondWei: bigint,
 ): Promise<TransactionResult> {
-  return sendWrite('open_challenge', [capsuleId, challengeType, challengeSummary, JSON.stringify(evidenceUrls), challengeBondWei])
+  return sendWrite('open_challenge', [capsuleId, challengeType, challengeSummary, JSON.stringify(evidenceUrls), challengeBondWei], challengeBondWei)
 }
 
 export async function requestChallengeVerdict(challengeId: string): Promise<TransactionResult> {
@@ -159,7 +159,7 @@ export async function claimChallengeReward(challengeId: string): Promise<Transac
 
 // ── bond writes ───────────────────────────────────────────────────
 
-export async function withdrawUnlockedBond(capsuleId: string, amountWei: number): Promise<TransactionResult> {
+export async function withdrawUnlockedBond(capsuleId: string, amountWei: bigint): Promise<TransactionResult> {
   return sendWrite('withdraw_unlocked_bond', [capsuleId, amountWei])
 }
 

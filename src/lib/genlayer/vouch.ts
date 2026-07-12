@@ -65,11 +65,27 @@ async function sendWrite(method: string, args: unknown[], valueWei: bigint = Big
   })
 
   const receipt = await client.waitForTransactionReceipt({ hash: hash as `0x${string}` & { length: 66 } })
-  const success = receipt.txExecutionResult === 1 || receipt.txExecutionResult === 0
+  const transaction = await client.getTransaction({ hash: hash as `0x${string}` & { length: 66 } })
+  const leaderReceipt = (transaction as unknown as {
+    consensus_data?: {
+      leader_receipt?: Array<{
+        result?: { status?: string; payload?: unknown }
+      }>
+    }
+  }).consensus_data?.leader_receipt?.[0]
+  const resultStatus = leaderReceipt?.result?.status
+  const success = resultStatus === 'return' ||
+    (resultStatus === undefined && (receipt.txExecutionResult === 1 || receipt.txExecutionResult === 0))
+
+  if (!success) {
+    const payload = leaderReceipt?.result?.payload
+    const reason = typeof payload === 'string' ? payload : 'Contract execution rolled back'
+    throw new Error(reason)
+  }
 
   return {
     hash:        hash as string,
-    status:      success ? 'confirmed' : 'failed',
+    status:      'confirmed',
     explorerUrl: buildExplorerTxUrl(hash as string),
   }
 }
